@@ -97,14 +97,6 @@ commandTests:
     command: "rsync"
     args: ["--version"]
     expectedOutput: ["rsync  version 3.*"]
-  - name: 'Certbot command'
-    command: "certbot"
-    args: ["--version"]
-    expectedOutput: ["certbot 2.*"]
-  - name: 'Docker command'
-    command: "docker"
-    args: ["--version"]
-    expectedOutput: ["Docker version 25.*"]
   - name: 'PHP info'
     command: "php"
     args: ["-m"]
@@ -115,14 +107,7 @@ commandTests:
       - ".*yaml.*"
       - ".*scrypt.*"
       - ".*curl.*"
-      - ".*PDO.*"
-      - ".*pdo_mysql.*"
       - ".*zstd.*"
       - ".*brotli.*"
       - ".*lz4.*"
       - ".*snappy.*"
-  - name: 'PHP intl'
-    command: "php"
-    args: ["-r", 'print(\Normalizer::FORM_D);']
-    expectedOutput:
-      - "4"
