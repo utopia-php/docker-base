@@ -152,6 +152,7 @@ RUN \
   apk update \
   && apk add --no-cache --virtual .deps \
   linux-headers \
+  icu-dev \
   make \
   automake \
   autoconf \
