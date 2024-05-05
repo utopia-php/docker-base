@@ -104,29 +104,17 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN \
   apk update \
-  && apk add --no-cache --virtual .deps \
-  linux-headers \
-  icu-dev \
-  make \
-  automake \
-  autoconf \
-  gcc \
-  g++ \
-  curl-dev \
-  && apk add --no-cache \
+  apk add --no-cache \
   libstdc++ \
   rsync \
   brotli-dev \
   yaml-dev \
   imagemagick \
-  imagemagick-dev \
-  libjpeg-turbo-dev \
-  jpeg-dev \
-  libjxl-dev \
+  libjpeg-turbo \
+  libjxl \
   libavif \
   libheif \
   imagemagick-heic \
-  libmaxminddb-dev \
   certbot \
   docker-cli \
   libgomp \
