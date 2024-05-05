@@ -105,7 +105,6 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN \
   apk update \
   apk add --no-cache \
-  libstdc++ \
   rsync \
   brotli-dev \
   yaml-dev \
