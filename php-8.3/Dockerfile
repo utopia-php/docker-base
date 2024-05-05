@@ -152,6 +152,7 @@ RUN \
   rsync \
   brotli-dev \
   lz4-dev \
+  zstd-dev \
   yaml-dev \
   imagemagick \
   libjpeg-turbo \
