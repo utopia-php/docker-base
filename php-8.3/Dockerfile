@@ -15,6 +15,7 @@ ENV PHP_REDIS_VERSION="6.0.2" \
 RUN \
   apk add --no-cache --virtual .deps \
   linux-headers \
+  icu-dev \
   make \
   automake \
   autoconf \
