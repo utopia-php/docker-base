@@ -159,7 +159,7 @@ RUN \
   libjxl \
   libavif \
   libheif \
-  imagemagick-heic \
+  # imagemagick-heic \
   libgomp \
   git \
   && rm -rf /var/cache/apk/*
