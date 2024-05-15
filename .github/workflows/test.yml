@@ -28,4 +28,4 @@ jobs:
       - name: Build & run container structure test
         run: |
           docker build -t utopia-base-test php-${{ matrix.php-versions }}/.
-          container-structure-test test --image utopia-base-test --config tests.yaml
+          container-structure-test test --image utopia-base-test --config tests.yaml php-${{ matrix.php-versions }}/tests.yaml
