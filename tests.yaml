@@ -1,0 +1,84 @@
+schemaVersion: '2.0.0'
+
+fileExistenceTests:
+  ## ini files
+  - name: 'Check swoole ini'
+    path: /usr/local/etc/php/conf.d/swoole.ini
+    shouldExist: true
+  - name: 'Check redis ini'
+    path: /usr/local/etc/php/conf.d/redis.ini
+    shouldExist: true
+  - name: 'Check imagick ini'
+    path: /usr/local/etc/php/conf.d/imagick.ini
+    shouldExist: true
+  - name: 'Check yaml ini'
+    path: /usr/local/etc/php/conf.d/yaml.ini
+    shouldExist: true
+  - name: 'Check scrypt ini'
+    path: /usr/local/etc/php/conf.d/scrypt.ini
+    shouldExist: true
+  - name: 'Check zstd ini'
+    path: /usr/local/etc/php/conf.d/zstd.ini
+    shouldExist: true
+  - name: 'Check brotli ini'
+    path: /usr/local/etc/php/conf.d/brotli.ini
+    shouldExist: true
+  - name: 'Check lz4 ini'
+    path: /usr/local/etc/php/conf.d/lz4.ini
+    shouldExist: true
+  - name: 'Check snappy ini'
+    path: /usr/local/etc/php/conf.d/snappy.ini
+    shouldExist: true
+
+fileContentTests:
+  - name: 'swoole ini'
+    path: '/usr/local/etc/php/conf.d/swoole.ini'
+    expectedContents: ['extension=swoole.so']
+  - name: 'redis ini'
+    path: '/usr/local/etc/php/conf.d/redis.ini'
+    expectedContents: ['extension=redis.so']
+  - name: 'imagick ini'
+    path: '/usr/local/etc/php/conf.d/imagick.ini'
+    expectedContents: ['extension=imagick.so']
+  - name: 'yaml ini'
+    path: '/usr/local/etc/php/conf.d/yaml.ini'
+    expectedContents: ['extension=yaml.so']
+  - name: 'scrypt ini'
+    path: '/usr/local/etc/php/conf.d/scrypt.ini'
+    expectedContents: ['extension=scrypt.so']
+  - name: 'zstd ini'
+    path: '/usr/local/etc/php/conf.d/zstd.ini'
+    expectedContents: ['extension=zstd.so']
+  - name: 'brotli ini'
+    path: '/usr/local/etc/php/conf.d/brotli.ini'
+    expectedContents: ['extension=brotli.so']
+  - name: 'lz4 ini'
+    path: '/usr/local/etc/php/conf.d/lz4.ini'
+    expectedContents: ['extension=lz4.so']
+  - name: 'snappy ini'
+    path: '/usr/local/etc/php/conf.d/snappy.ini'
+    expectedContents: ['extension=snappy.so']
+  
+commandTests:
+  - name: 'Imagemagick command'
+    command: "magick"
+    args: ["--version"]
+    expectedOutput: [".*ImageMagick 7.1.*"]
+  - name: 'rsync command'
+    command: "rsync"
+    args: ["--version"]
+    expectedOutput: ["rsync  version 3.*"]
+  - name: 'PHP info'
+    command: "php"
+    args: ["-m"]
+    expectedOutput:
+      - ".*imagick.*"
+      - ".*swoole.*"
+      - ".*redis.*"
+      - ".*yaml.*"
+      - ".*scrypt.*"
+      - ".*curl.*"
+      - ".*zstd.*"
+      - ".*brotli.*"
+      - ".*lz4.*"
+      - ".*snappy.*"
