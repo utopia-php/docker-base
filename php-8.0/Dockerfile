@@ -161,6 +161,7 @@ RUN \
   libheif \
   # imagemagick-heic \
   libgomp \
+  libwebp \
   git \
   && rm -rf /var/cache/apk/*
   
