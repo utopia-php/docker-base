@@ -1,6 +1,6 @@
 FROM php:8.0-cli-alpine as compile
 
-ENV PHP_REDIS_VERSION="6.0.2" \
+ENV PHP_REDIS_VERSION="6.1.0" \
     PHP_SWOOLE_VERSION="v5.1.2" \
     PHP_IMAGICK_VERSION="3.7.0" \
     PHP_YAML_VERSION="2.2.3" \
