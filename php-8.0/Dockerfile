@@ -1,4 +1,4 @@
-FROM php:8.0-cli-alpine as compile
+FROM php:8.0-cli-alpine AS compile
 
 ENV PHP_REDIS_VERSION="6.1.0" \
     PHP_SWOOLE_VERSION="v5.1.7" \
@@ -86,7 +86,7 @@ RUN \
   make && make install
 
 # Zstd Compression
-FROM compile as zstd
+FROM compile AS zstd
 RUN git clone --recursive -n https://github.com/kjdev/php-ext-zstd.git \
   && cd php-ext-zstd \
   && git checkout $PHP_ZSTD_VERSION \
@@ -95,7 +95,7 @@ RUN git clone --recursive -n https://github.com/kjdev/php-ext-zstd.git \
   && make && make install
 
 ## Brotli Extension
-FROM compile as brotli
+FROM compile AS brotli
 RUN git clone https://github.com/kjdev/php-ext-brotli.git \
   && cd php-ext-brotli \
   && git reset --hard $PHP_BROTLI_VERSION \
@@ -139,7 +139,7 @@ RUN \
   ./configure && \
   make && make install
 
-FROM php:8.0-cli-alpine as final
+FROM php:8.0-cli-alpine AS final
 
 LABEL maintainer="team@appwrite.io"
 
