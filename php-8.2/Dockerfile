@@ -10,7 +10,8 @@ ENV PHP_REDIS_VERSION="6.1.0" \
     PHP_BROTLI_VERSION="0.15.0" \
     PHP_SNAPPY_VERSION="0.2.2" \
     PHP_LZ4_VERSION="0.4.4" \
-    PHP_XDEBUG_VERSION="3.4.1"
+    PHP_XDEBUG_VERSION="3.4.1" \
+    PHP_MONGO_VERSION="1.20.1"
 
 RUN \
   apk add --no-cache --virtual .deps \
@@ -34,7 +35,8 @@ RUN \
   zstd-dev \
   brotli-dev \
   lz4-dev \
-  curl-dev
+  curl-dev \
+  cmake
 
 RUN docker-php-ext-install sockets
 
@@ -139,6 +141,15 @@ RUN \
   ./configure && \
   make && make install
 
+## MongoDB Extension
+FROM compile AS mongodb
+RUN \
+  git clone --depth 1 --recursive --branch $PHP_MONGO_VERSION https://github.com/mongodb/mongo-php-driver.git && \
+  cd mongo-php-driver && \
+  phpize && \
+  ./configure && \
+  make && make install
+
 FROM php:8.2-cli-alpine AS final
 
 LABEL maintainer="team@appwrite.io"
@@ -179,6 +190,7 @@ COPY --from=brotli /usr/local/lib/php/extensions/no-debug-non-zts-20220829/brotl
 COPY --from=lz4 /usr/local/lib/php/extensions/no-debug-non-zts-20220829/lz4.so /usr/local/lib/php/extensions/no-debug-non-zts-20220829/
 COPY --from=snappy /usr/local/lib/php/extensions/no-debug-non-zts-20220829/snappy.so /usr/local/lib/php/extensions/no-debug-non-zts-20220829/
 COPY --from=xdebug /usr/local/lib/php/extensions/no-debug-non-zts-20220829/xdebug.so /usr/local/lib/php/extensions/no-debug-non-zts-20220829/
+COPY --from=mongodb /usr/local/lib/php/extensions/no-debug-non-zts-20220829/mongodb.so /usr/local/lib/php/extensions/no-debug-non-zts-20220829/
 
 # Enable Extensions
 RUN echo extension=swoole.so >> /usr/local/etc/php/conf.d/swoole.ini
@@ -190,6 +202,7 @@ RUN echo extension=zstd.so >> /usr/local/etc/php/conf.d/zstd.ini
 RUN echo extension=brotli.so >> /usr/local/etc/php/conf.d/brotli.ini
 RUN echo extension=lz4.so >> /usr/local/etc/php/conf.d/lz4.ini
 RUN echo extension=snappy.so >> /usr/local/etc/php/conf.d/snappy.ini
+RUN echo extension=mongodb.so >> /usr/local/etc/php/conf.d/mongodb.ini
 
 EXPOSE 80
 
