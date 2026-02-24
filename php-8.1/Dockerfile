@@ -11,7 +11,7 @@ ENV PHP_REDIS_VERSION="6.1.0" \
     PHP_SNAPPY_VERSION="0.2.2" \
     PHP_LZ4_VERSION="0.4.4" \
     PHP_XDEBUG_VERSION="3.4.1" \
-    PHP_MONGO_VERSION="1.20.1"
+    PHP_MONGO_VERSION="2.2.1"
 
 RUN \
   apk add --no-cache --virtual .deps \
