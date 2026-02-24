@@ -29,3 +29,6 @@ fileExistenceTests:
   - name: 'Check snappy extension'
     path: /usr/local/lib/php/extensions/no-debug-non-zts-20230831/snappy.so
     shouldExist: true
+  - name: 'Check mongodb extension'
+    path: /usr/local/lib/php/extensions/no-debug-non-zts-20230831/mongodb.so
+    shouldExist: true
