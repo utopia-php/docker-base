@@ -135,7 +135,7 @@ jobs:
         id: dive
         run: |
           set -o pipefail
-          CI=true dive --ci-config .dive-ci utopia-base-test | tee dive.log
+          CI=true dive --ci-config .dive-ci.yml utopia-base-test | tee dive.log
 
       - name: Publish dive report to step summary
         if: always() && steps.dive.outcome != 'skipped'
