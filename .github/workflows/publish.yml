@@ -1,4 +1,4 @@
-name: Publish SHA
+name: Publish
 
 on:
   workflow_run:
