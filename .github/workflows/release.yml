@@ -28,7 +28,7 @@ jobs:
       matrix:
         php-versions: ['8.3', '8.4', '8.5']
     steps:
-      - name: Login to DockerHub
+      - name: Login to Docker Hub
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
@@ -47,7 +47,7 @@ jobs:
           tags: |
             type=raw,value=php-${{ matrix.php-versions }}-${{ github.event.release.tag_name }}
 
-      - name: Promote multi-arch image
+      - name: Promote
         run: |
           SRC=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:php-${{ matrix.php-versions }}-${{ github.sha }}
           for tag in ${{ steps.meta.outputs.tags }}; do

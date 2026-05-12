@@ -1,4 +1,4 @@
-name: Cleanup stale CI tags
+name: Cleanup
 
 on:
   schedule:
@@ -18,9 +18,10 @@ env:
 
 jobs:
   prune:
+    name: Prune
     runs-on: ubuntu-24.04
     steps:
-      - name: Prune stale per-commit tags
+      - name: Prune stale tags
         env:
           DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
