@@ -4,9 +4,14 @@ on:
   release:
     types: [published]
 
+# Share the per-commit build group with ci.yml. If CI is still running
+# on this commit, release queues behind it.
+concurrency:
+  group: build-${{ github.sha }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
-  actions: read
 
 env:
   REGISTRY: docker.io
@@ -15,37 +20,8 @@ env:
 # Promote the already-built, already-tested CI image (built on the
 # release's target commit) to the release tag — no rebuild.
 jobs:
-  wait-for-ci:
-    name: Wait for CI
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Wait for CI workflow on ${{ github.sha }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SHA: ${{ github.sha }}
-          REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          deadline=$(( $(date +%s) + 1800 ))  # 30 min
-          while :; do
-            run=$(gh run list --repo "$REPO" --workflow ci.yml --commit "$SHA" \
-              --json databaseId,status,conclusion --limit 1)
-            status=$(echo "$run" | jq -r '.[0].status // "missing"')
-            conclusion=$(echo "$run" | jq -r '.[0].conclusion // ""')
-            echo "CI status: $status, conclusion: $conclusion"
-            if [ "$status" = "completed" ]; then
-              if [ "$conclusion" = "success" ]; then exit 0; fi
-              echo "CI did not succeed (conclusion=$conclusion)"; exit 1
-            fi
-            if [ "$(date +%s)" -gt "$deadline" ]; then
-              echo "Timed out waiting for CI"; exit 1
-            fi
-            sleep 30
-          done
-
   promote:
     name: Promote (${{ matrix.php-versions }})
-    needs: wait-for-ci
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false

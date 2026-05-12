@@ -9,8 +9,11 @@ on:
     - cron: '43 11 * * 6'
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # PR runs cancel earlier runs on the same ref. Push/schedule runs share
+  # the per-commit group used by release.yml so a release queues behind
+  # CI on the same commit instead of racing.
+  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.ref) || format('build-{0}', github.sha) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
