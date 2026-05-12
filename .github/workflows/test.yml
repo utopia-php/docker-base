@@ -5,27 +5,35 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 env:
   REGISTRY: docker.io
   IMAGE_NAME: appwrite/base
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        php-versions: ['8.2', '8.3', '8.4', '8.5'] # add PHP versions as required
+        php-versions: ['8.2', '8.3', '8.4', '8.5']
+        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            os: ubuntu-24.04
+          - arch: arm64
+            os: ubuntu-24.04-arm
     steps:
       - name: Checkout the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Setup container structure test
+      - name: Build an image from Dockerfile
         run: |
-          curl -LO https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-amd64
-          chmod +x container-structure-test-linux-amd64
-          sudo mv container-structure-test-linux-amd64 /usr/local/bin/container-structure-test
+          docker image build --tag utopia-base-test php-${{ matrix.php-versions }}/.
 
-      - name: Build & run container structure test
-        run: |
-          docker build -t utopia-base-test php-${{ matrix.php-versions }}/.
-          container-structure-test test --image utopia-base-test --config tests.yaml php-${{ matrix.php-versions }}/tests.yaml
+      - name: Run container structure tests
+        uses: plexsystems/container-structure-test-action@c0a028aa96e8e82ae35be556040340cbb3e280ca # v0.3.0
+        with:
+          image: utopia-base-test
+          config: php-${{ matrix.php-versions }}/tests.yaml
