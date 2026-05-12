@@ -83,8 +83,10 @@ jobs:
         run: docker image load -i image.tar
 
       - name: Install container-structure-test
+        env:
+          CST_VERSION: v1.22.1
         run: |
-          curl -fsSL -o cst https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-${{ matrix.arch }}
+          curl -fsSL -o cst "https://storage.googleapis.com/container-structure-test/${CST_VERSION}/container-structure-test-linux-${{ matrix.arch }}"
           chmod +x cst
           sudo mv cst /usr/local/bin/container-structure-test
 
