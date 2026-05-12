@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '43 11 * * 6'
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: appwrite/utopia-base
+
+jobs:
+  structure-test:
+    name: Structure (${{ matrix.php-versions }}, ${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        php-versions: ['8.3', '8.4', '8.5']
+        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            os: ubuntu-24.04
+          - arch: arm64
+            os: ubuntu-24.04-arm
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Build image
+        run: |
+          docker image build --tag utopia-base-test php-${{ matrix.php-versions }}/.
+
+      - name: Run container structure tests
+        uses: plexsystems/container-structure-test-action@c0a028aa96e8e82ae35be556040340cbb3e280ca # v0.3.0
+        with:
+          image: utopia-base-test
+          config: php-${{ matrix.php-versions }}/tests.yaml
+
+  dive:
+    name: Dive (${{ matrix.php-versions }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php-versions: ['8.3', '8.4', '8.5']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Build image
+        run: |
+          docker image build --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:php-${{ matrix.php-versions }}-${{ github.sha }} php-${{ matrix.php-versions }}/.
+
+      - name: Dive
+        uses: yuichielectric/dive-action@c2bf577bd2ed379a30c45597cf304f9f269dbdfe # 0.0.4
+        with:
+          config-file: ${{ github.workspace }}/.dive-ci.yml
+          image: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:php-${{ matrix.php-versions }}-${{ github.sha }}'
+
+  trivy:
+    name: Trivy (${{ matrix.php-versions }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php-versions: ['8.3', '8.4', '8.5']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Build image
+        run: |
+          docker image build --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:php-${{ matrix.php-versions }}-${{ github.sha }} php-${{ matrix.php-versions }}/.
+
+      - name: Run Trivy vulnerability scanner (sarif report)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          format: 'sarif'
+          image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:php-${{ matrix.php-versions }}-${{ github.sha }}'
+          output: 'trivy-results-php-${{ matrix.php-versions }}.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@96a56f9e1619f4ee5970aabb968dc392d1e9b425 # codeql-bundle-v2.25.4
+        with:
+          sarif_file: 'trivy-results-php-${{ matrix.php-versions }}.sarif'
+          category: 'php-${{ matrix.php-versions }}'
