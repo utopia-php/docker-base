@@ -117,11 +117,36 @@ jobs:
       - name: Load image
         run: docker image load -i image.tar
 
-      - name: Dive
-        uses: yuichielectric/dive-action@c2bf577bd2ed379a30c45597cf304f9f269dbdfe # 0.0.4
-        with:
-          config-file: ${{ github.workspace }}/.dive-ci.yml
-          image: utopia-base-test
+      - name: Install dive
+        env:
+          DIVE_VERSION: v0.13.1
+        run: |
+          ver="${DIVE_VERSION#v}"
+          base="https://github.com/wagoodman/dive/releases/download/${DIVE_VERSION}"
+          asset="dive_${ver}_linux_amd64.tar.gz"
+          curl -fsSL -o "$asset" "$base/$asset"
+          curl -fsSL -o checksums.txt "$base/dive_${ver}_checksums.txt"
+          grep " $asset\$" checksums.txt | sha256sum -c -
+          tar -xzf "$asset" dive
+          chmod +x dive
+          sudo mv dive /usr/local/bin/dive
+
+      - name: Run dive
+        id: dive
+        run: |
+          set -o pipefail
+          CI=true dive --ci-config .dive-ci utopia-base-test | tee dive.log
+
+      - name: Publish dive report to step summary
+        if: always() && steps.dive.outcome != 'skipped'
+        run: |
+          {
+            echo "## Dive — php-${{ matrix.php-versions }}"
+            echo
+            echo '```'
+            cat dive.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   trivy:
     name: Trivy (${{ matrix.php-versions }})
