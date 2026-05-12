@@ -18,7 +18,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        php-versions: ['8.2', '8.3', '8.4', '8.5']
+        php-versions: ['8.3', '8.4', '8.5']
         arch: [amd64, arm64]
         include:
           - arch: amd64
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        php-versions: ['8.2', '8.3', '8.4', '8.5']
+        php-versions: ['8.3', '8.4', '8.5']
     steps:
       - name: Login to DockerHub
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
