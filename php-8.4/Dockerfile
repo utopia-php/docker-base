@@ -1,7 +1,7 @@
 FROM php:8.4-cli-alpine AS compile
 
 ENV PHP_REDIS_VERSION="6.1.0" \
-    PHP_SWOOLE_VERSION="v6.1.3" \
+    PHP_SWOOLE_VERSION="v6.2.0" \
     PHP_IMAGICK_VERSION="3.8.1" \
     PHP_YAML_VERSION="2.2.4" \
     PHP_MAXMINDDB_VERSION="v1.12.0" \
