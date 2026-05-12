@@ -86,9 +86,13 @@ jobs:
         env:
           CST_VERSION: v1.22.1
         run: |
-          curl -fsSL -o cst "https://github.com/GoogleContainerTools/container-structure-test/releases/download/${CST_VERSION}/container-structure-test-linux-${{ matrix.arch }}"
-          chmod +x cst
-          sudo mv cst /usr/local/bin/container-structure-test
+          base="https://github.com/GoogleContainerTools/container-structure-test/releases/download/${CST_VERSION}"
+          asset="container-structure-test-linux-${{ matrix.arch }}"
+          curl -fsSL -o "$asset" "$base/$asset"
+          curl -fsSL -o checksums.txt "$base/checksums.txt"
+          grep " $asset\$" checksums.txt | sha256sum -c -
+          chmod +x "$asset"
+          sudo mv "$asset" /usr/local/bin/container-structure-test
 
       - name: Run container structure tests
         run: container-structure-test test --image utopia-base-test --config php-${{ matrix.php-versions }}/tests.yaml
