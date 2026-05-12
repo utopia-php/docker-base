@@ -1,0 +1,48 @@
+# https://github.com/aquasecurity/trivy-action
+name: Trivy Scan
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: '43 11 * * 6'
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: appwrite/utopia-base
+
+jobs:
+  trivy:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php-versions: ['8.2', '8.3', '8.4', '8.5']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Build an image from Dockerfile
+        run: |
+          docker image build --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:php-${{ matrix.php-versions }}-${{ github.sha }} php-${{ matrix.php-versions }}/.
+
+      - name: Run Trivy vulnerability scanner (sarif report)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          format: 'sarif'
+          image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:php-${{ matrix.php-versions }}-${{ github.sha }}'
+          output: 'trivy-results-php-${{ matrix.php-versions }}.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@96a56f9e1619f4ee5970aabb968dc392d1e9b425 # codeql-bundle-v2.25.4
+        with:
+          sarif_file: 'trivy-results-php-${{ matrix.php-versions }}.sarif'
+          category: 'php-${{ matrix.php-versions }}'
