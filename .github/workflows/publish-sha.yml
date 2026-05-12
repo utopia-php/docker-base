@@ -1,0 +1,91 @@
+name: Publish SHA
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: build-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: appwrite/utopia-base
+
+jobs:
+  push:
+    name: Push (${{ matrix.php-versions }}, ${{ matrix.arch }})
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php-versions: ['8.3', '8.4', '8.5']
+        arch: [amd64, arm64]
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Download image artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: image-php-${{ matrix.php-versions }}-${{ matrix.arch }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Load image
+        run: docker image load -i image.tar
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=false
+            suffix=-${{ matrix.arch }}
+          tags: |
+            type=raw,value=php-${{ matrix.php-versions }}-${{ github.event.workflow_run.head_sha }}
+
+      - name: Push image
+        run: |
+          for tag in ${{ steps.meta.outputs.tags }}; do
+            docker tag utopia-base-test "$tag"
+            docker push "$tag"
+          done
+
+  manifest:
+    name: Manifest (${{ matrix.php-versions }})
+    needs: push
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php-versions: ['8.3', '8.4', '8.5']
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Create manifest
+        env:
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          docker buildx imagetools create \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:php-${{ matrix.php-versions }}-${SHA} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:php-${{ matrix.php-versions }}-${SHA}-amd64 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:php-${{ matrix.php-versions }}-${SHA}-arm64
