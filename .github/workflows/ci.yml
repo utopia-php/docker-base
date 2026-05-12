@@ -1,0 +1,184 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '43 11 * * 6'
+
+concurrency:
+  # PR runs cancel earlier runs on the same ref. Push/schedule runs share
+  # the per-commit group used by release.yml so a release queues behind
+  # CI on the same commit instead of racing.
+  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.ref) || format('build-{0}', github.sha) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: appwrite/utopia-base
+
+jobs:
+  build:
+    name: Build (${{ matrix.php-versions }}, ${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        php-versions: ['8.3', '8.4', '8.5']
+        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            os: ubuntu-24.04
+          - arch: arm64
+            os: ubuntu-24.04-arm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Build image
+        run: |
+          docker image build --tag utopia-base-test php-${{ matrix.php-versions }}/.
+
+      - name: Save image
+        run: docker image save utopia-base-test -o image.tar
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: image-php-${{ matrix.php-versions }}-${{ matrix.arch }}
+          path: image.tar
+          retention-days: 1
+
+  structure-test:
+    name: Structure (${{ matrix.php-versions }}, ${{ matrix.arch }})
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        php-versions: ['8.3', '8.4', '8.5']
+        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            os: ubuntu-24.04
+          - arch: arm64
+            os: ubuntu-24.04-arm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Download image artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: image-php-${{ matrix.php-versions }}-${{ matrix.arch }}
+
+      - name: Load image
+        run: docker image load -i image.tar
+
+      - name: Install container-structure-test
+        env:
+          CST_VERSION: v1.22.1
+        run: |
+          base="https://github.com/GoogleContainerTools/container-structure-test/releases/download/${CST_VERSION}"
+          asset="container-structure-test-linux-${{ matrix.arch }}"
+          curl -fsSL -o "$asset" "$base/$asset"
+          curl -fsSL -o checksums.txt "$base/checksums.txt"
+          grep " $asset\$" checksums.txt | sha256sum -c -
+          chmod +x "$asset"
+          sudo mv "$asset" /usr/local/bin/container-structure-test
+
+      - name: Run container structure tests
+        run: container-structure-test test --image utopia-base-test --config php-${{ matrix.php-versions }}/tests.yaml
+
+  dive:
+    name: Dive (${{ matrix.php-versions }})
+    needs: build
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php-versions: ['8.3', '8.4', '8.5']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Download image artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: image-php-${{ matrix.php-versions }}-amd64
+
+      - name: Load image
+        run: docker image load -i image.tar
+
+      - name: Install dive
+        env:
+          DIVE_VERSION: v0.13.1
+        run: |
+          ver="${DIVE_VERSION#v}"
+          base="https://github.com/wagoodman/dive/releases/download/${DIVE_VERSION}"
+          asset="dive_${ver}_linux_amd64.tar.gz"
+          curl -fsSL -o "$asset" "$base/$asset"
+          curl -fsSL -o checksums.txt "$base/dive_${ver}_checksums.txt"
+          grep " $asset\$" checksums.txt | sha256sum -c -
+          tar -xzf "$asset" dive
+          chmod +x dive
+          sudo mv dive /usr/local/bin/dive
+
+      - name: Run dive
+        id: dive
+        run: |
+          set -o pipefail
+          CI=true dive --ci-config .dive-ci.yml utopia-base-test | tee dive.log
+
+      - name: Publish dive report to step summary
+        if: always() && steps.dive.outcome != 'skipped'
+        run: |
+          {
+            echo "## Dive — php-${{ matrix.php-versions }}"
+            echo
+            echo '```'
+            cat dive.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  trivy:
+    name: Trivy (${{ matrix.php-versions }})
+    needs: build
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php-versions: ['8.3', '8.4', '8.5']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Download image artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: image-php-${{ matrix.php-versions }}-amd64
+
+      - name: Load image
+        run: docker image load -i image.tar
+
+      - name: Run Trivy
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          format: 'sarif'
+          image-ref: 'utopia-base-test'
+          output: 'trivy-results-php-${{ matrix.php-versions }}.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@96a56f9e1619f4ee5970aabb968dc392d1e9b425 # codeql-bundle-v2.25.4
+        with:
+          sarif_file: 'trivy-results-php-${{ matrix.php-versions }}.sarif'
+          category: 'php-${{ matrix.php-versions }}'
+

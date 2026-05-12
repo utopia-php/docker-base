@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+# Share the per-commit build group with ci.yml. If CI is still running
+# on this commit, release queues behind it.
+concurrency:
+  group: build-${{ github.sha }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: appwrite/utopia-base
+
+# Promote the already-built, already-tested CI image (built on the
+# release's target commit) to the release tag — no rebuild.
+jobs:
+  promote:
+    name: Promote (${{ matrix.php-versions }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php-versions: ['8.3', '8.4', '8.5']
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=false
+          tags: |
+            type=raw,value=php-${{ matrix.php-versions }}-${{ github.event.release.tag_name }}
+
+      - name: Promote
+        run: |
+          SRC=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:php-${{ matrix.php-versions }}-${{ github.sha }}
+          for tag in ${{ steps.meta.outputs.tags }}; do
+            docker buildx imagetools create -t "$tag" "$SRC"
+          done

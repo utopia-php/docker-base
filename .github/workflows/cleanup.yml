@@ -1,0 +1,56 @@
+name: Cleanup
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: docker.io
+  REPO: appwrite/utopia-base
+  # Delete CI tags (those matching php-X.Y-<sha>[-arch]) last pushed more
+  # than this many days ago. Released semver tags don't match the regex
+  # and are never touched.
+  TTL_DAYS: 14
+
+jobs:
+  prune:
+    name: Prune
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Prune stale tags
+        env:
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          token=$(curl -fsS -H "Content-Type: application/json" \
+            -X POST \
+            -d "{\"username\": \"$DOCKERHUB_USERNAME\", \"password\": \"$DOCKERHUB_PASSWORD\"}" \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
+
+          cutoff=$(date -u -d "${TTL_DAYS} days ago" +%s)
+          # CI tags look like php-8.3-<40-char sha>[-amd64|-arm64]
+          pattern='^php-[0-9]+\.[0-9]+-[0-9a-f]{40}(-(amd64|arm64))?$'
+
+          url="https://hub.docker.com/v2/repositories/${REPO}/tags?page_size=100"
+          while [ -n "$url" ] && [ "$url" != "null" ]; do
+            page=$(curl -fsS -H "Authorization: JWT $token" "$url")
+            url=$(echo "$page" | jq -r '.next')
+
+            while IFS=$'\t' read -r name pushed; do
+              [[ "$name" =~ $pattern ]] || continue
+              pushed_ts=$(date -u -d "$pushed" +%s)
+              if [ "$pushed_ts" -lt "$cutoff" ]; then
+                echo "Deleting $name (pushed $pushed)"
+                curl -fsS -X DELETE \
+                  -H "Authorization: JWT $token" \
+                  "https://hub.docker.com/v2/repositories/${REPO}/tags/${name}/"
+              fi
+            done < <(echo "$page" | jq -r '.results[] | "\(.name)\t\(.tag_last_pushed)"')
+          done
+          echo "Done."
