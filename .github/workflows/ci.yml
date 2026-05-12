@@ -84,7 +84,7 @@ jobs:
 
       - name: Install container-structure-test
         run: |
-          curl -sLo cst https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-${{ matrix.arch }}
+          curl -fsSL -o cst https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-${{ matrix.arch }}
           chmod +x cst
           sudo mv cst /usr/local/bin/container-structure-test
 
