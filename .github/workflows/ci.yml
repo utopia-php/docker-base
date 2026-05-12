@@ -8,6 +8,10 @@ on:
   schedule:
     - cron: '43 11 * * 6'
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   security-events: write
@@ -18,8 +22,8 @@ env:
   IMAGE_NAME: appwrite/utopia-base
 
 jobs:
-  structure-test:
-    name: Structure (${{ matrix.php-versions }}, ${{ matrix.arch }})
+  build:
+    name: Build (${{ matrix.php-versions }}, ${{ matrix.arch }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -39,6 +43,42 @@ jobs:
         run: |
           docker image build --tag utopia-base-test php-${{ matrix.php-versions }}/.
 
+      - name: Save image
+        run: docker image save utopia-base-test -o image.tar
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: image-php-${{ matrix.php-versions }}-${{ matrix.arch }}
+          path: image.tar
+          retention-days: 1
+
+  structure-test:
+    name: Structure (${{ matrix.php-versions }}, ${{ matrix.arch }})
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        php-versions: ['8.3', '8.4', '8.5']
+        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            os: ubuntu-24.04
+          - arch: arm64
+            os: ubuntu-24.04-arm
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Download image artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: image-php-${{ matrix.php-versions }}-${{ matrix.arch }}
+
+      - name: Load image
+        run: docker image load -i image.tar
+
       - name: Run container structure tests
         uses: plexsystems/container-structure-test-action@c0a028aa96e8e82ae35be556040340cbb3e280ca # v0.3.0
         with:
@@ -47,6 +87,7 @@ jobs:
 
   dive:
     name: Dive (${{ matrix.php-versions }})
+    needs: build
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -56,18 +97,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Build image
-        run: |
-          docker image build --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:php-${{ matrix.php-versions }}-${{ github.sha }} php-${{ matrix.php-versions }}/.
+      - name: Download image artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: image-php-${{ matrix.php-versions }}-amd64
+
+      - name: Load image
+        run: docker image load -i image.tar
 
       - name: Dive
         uses: yuichielectric/dive-action@c2bf577bd2ed379a30c45597cf304f9f269dbdfe # 0.0.4
         with:
           config-file: ${{ github.workspace }}/.dive-ci.yml
-          image: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:php-${{ matrix.php-versions }}-${{ github.sha }}'
+          image: utopia-base-test
 
   trivy:
     name: Trivy (${{ matrix.php-versions }})
+    needs: build
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -77,15 +123,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Build image
-        run: |
-          docker image build --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:php-${{ matrix.php-versions }}-${{ github.sha }} php-${{ matrix.php-versions }}/.
+      - name: Download image artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: image-php-${{ matrix.php-versions }}-amd64
+
+      - name: Load image
+        run: docker image load -i image.tar
 
       - name: Run Trivy vulnerability scanner (sarif report)
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           format: 'sarif'
-          image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:php-${{ matrix.php-versions }}-${{ github.sha }}'
+          image-ref: 'utopia-base-test'
           output: 'trivy-results-php-${{ matrix.php-versions }}.sarif'
           severity: 'CRITICAL,HIGH'
 
