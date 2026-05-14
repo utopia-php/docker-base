@@ -34,7 +34,18 @@ All publishing workflows share a `build-<sha>` concurrency group so a release qu
 
 ## Local development
 
+A single `Dockerfile` is templated by the per-version configs in `versions/<X.Y>.env`:
+
 ```sh
-docker build -t utopia-base-test php-8.4/.
-container-structure-test test --image utopia-base-test --config php-8.4/tests.yaml
+set -a && . versions/8.4.env && set +a
+args=()
+while IFS='=' read -r k _; do
+  [[ -z "$k" || "$k" =~ ^# ]] && continue
+  args+=(--build-arg "$k")
+done < versions/8.4.env
+
+docker build "${args[@]}" -t utopia-base-test .
+container-structure-test test --image utopia-base-test --config tests.yaml
 ```
+
+To bump an extension version, edit the relevant `versions/<X.Y>.env`. To add a new PHP version, drop in a new `versions/<X.Y>.env` and add the version to the matrix in `.github/workflows/ci.yml` and `publish.yml`.
