@@ -44,7 +44,15 @@ jobs:
 
       - name: Build image
         run: |
-          docker image build --tag utopia-base-test php-${{ matrix.php-versions }}/.
+          set -a
+          . ./versions/${{ matrix.php-versions }}.env
+          set +a
+          args=()
+          while IFS='=' read -r k _; do
+            [[ -z "$k" || "$k" =~ ^# ]] && continue
+            args+=(--build-arg "$k")
+          done < versions/${{ matrix.php-versions }}.env
+          docker image build "${args[@]}" --tag utopia-base-test .
 
       - name: Save image
         run: docker image save utopia-base-test -o image.tar
@@ -95,7 +103,7 @@ jobs:
           sudo mv "$asset" /usr/local/bin/container-structure-test
 
       - name: Run container structure tests
-        run: container-structure-test test --image utopia-base-test --config php-${{ matrix.php-versions }}/tests.yaml
+        run: container-structure-test test --image utopia-base-test --config tests.yaml
 
   dive:
     name: Dive (${{ matrix.php-versions }})
