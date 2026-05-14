@@ -1,8 +1,10 @@
 VERSION ?= 8.4
-IMAGE ?= utopia-base-test
+IMAGE ?= utopia-base-test:$(VERSION)
 ENV_FILE := versions/$(VERSION).env
 
-BUILD_ARGS := $(shell awk -F= '!/^\#/ && NF { printf "--build-arg %s ", $$1 }' $(ENV_FILE))
+VERSIONS := $(patsubst versions/%.env,%,$(wildcard versions/*.env))
+
+BUILD_ARGS = $(shell awk -F= '!/^\#/ && NF { printf "--build-arg %s ", $$1 }' $(ENV_FILE))
 
 .PHONY: build test all clean
 
@@ -14,9 +16,7 @@ test: build
 	container-structure-test test --image $(IMAGE) --config tests.yaml
 
 all:
-	$(MAKE) build VERSION=8.3
-	$(MAKE) build VERSION=8.4
-	$(MAKE) build VERSION=8.5
+	@for v in $(VERSIONS); do $(MAKE) build VERSION=$$v || exit $$?; done
 
 clean:
-	docker rmi $(IMAGE) 2>/dev/null || true
+	@for v in $(VERSIONS); do docker rmi utopia-base-test:$$v 2>/dev/null || true; done
