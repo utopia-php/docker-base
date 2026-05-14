@@ -43,16 +43,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Build image
-        run: |
-          set -a
-          . ./versions/${{ matrix.php-versions }}.env
-          set +a
-          args=()
-          while IFS='=' read -r k _; do
-            [[ -z "$k" || "$k" =~ ^# ]] && continue
-            args+=(--build-arg "$k")
-          done < versions/${{ matrix.php-versions }}.env
-          docker image build "${args[@]}" --tag utopia-base-test .
+        run: make build VERSION=${{ matrix.php-versions }} IMAGE=utopia-base-test
 
       - name: Save image
         run: docker image save utopia-base-test -o image.tar
