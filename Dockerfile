@@ -135,9 +135,8 @@ RUN git clone --recursive https://github.com/kjdev/php-ext-snappy.git \
   && strip --strip-unneeded /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/*.so
 
 FROM compile AS scrypt
-RUN git clone --depth 1 https://github.com/DomBlack/php-scrypt.git  \
+RUN git clone --depth 1 --branch $PHP_SCRYPT_VERSION https://github.com/DomBlack/php-scrypt.git  \
   && cd php-scrypt  \
-  && git reset --hard $PHP_SCRYPT_VERSION  \
   && phpize  \
   && ./configure --enable-scrypt  \
   && make && make install \
