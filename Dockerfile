@@ -1,7 +1,13 @@
 ARG PHP_VERSION=8.5
 ARG PHP_API
 
-FROM php:${PHP_VERSION}-cli-alpine AS compile
+FROM php:${PHP_VERSION}-cli-alpine AS trusted-base
+
+# Distrust the compromised eMudhra chains before build-time or runtime HTTPS.
+RUN apk add --no-cache 'ca-certificates>=20261020-r0' 'ca-certificates-bundle>=20261020-r0' && \
+  update-ca-certificates
+
+FROM trusted-base AS compile
 ARG PHP_API
 ARG PHP_REDIS_VERSION
 ARG PHP_SWOOLE_VERSION
@@ -155,7 +161,7 @@ RUN \
   make && make install && \
   strip --strip-unneeded /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/*.so
 
-FROM php:${PHP_VERSION}-cli-alpine AS final
+FROM trusted-base AS final
 ARG PHP_API
 
 LABEL maintainer="team@appwrite.io"
