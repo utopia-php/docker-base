@@ -1,7 +1,8 @@
 ARG PHP_VERSION=8.5
 ARG PHP_API
+ARG ALPINE_VERSION=3.23
 
-FROM php:${PHP_VERSION}-cli-alpine AS trusted-base
+FROM php:${PHP_VERSION}-cli-alpine${ALPINE_VERSION} AS trusted-base
 
 # Distrust the compromised eMudhra chains before build-time or runtime HTTPS.
 RUN apk add --no-cache 'ca-certificates>=20261020-r0' 'ca-certificates-bundle>=20261020-r0' && \
