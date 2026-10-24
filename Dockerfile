@@ -5,7 +5,10 @@ ARG ALPINE_VERSION=3.23
 FROM php:${PHP_VERSION}-cli-alpine${ALPINE_VERSION} AS trusted-base
 
 # Distrust the compromised eMudhra chains before build-time or runtime HTTPS.
-RUN apk add --no-cache 'ca-certificates>=20261020-r0' 'ca-certificates-bundle>=20261020-r0' && \
+# brotli-libs 1.2.1 fixes the decoder out-of-bounds write (CVE-2026-111497);
+# the php image already carries 1.2.0 for curl, so the floor forces the upgrade.
+RUN apk add --no-cache 'ca-certificates>=20261020-r0' 'ca-certificates-bundle>=20261020-r0' \
+  'brotli-libs>=1.2.1-r0' && \
   update-ca-certificates
 
 FROM trusted-base AS compile
