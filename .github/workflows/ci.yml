@@ -96,6 +96,9 @@ jobs:
       - name: Run container structure tests
         run: container-structure-test test --image utopia-base-test --config tests.yaml
 
+      - name: Check Swoole upload marker handling
+        run: docker run --rm -v "$PWD/tests-swoole.php:/tests-swoole.php:ro" utopia-base-test php /tests-swoole.php
+
   dive:
     name: Dive (${{ matrix.php-versions }})
     needs: build
