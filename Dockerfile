@@ -186,7 +186,7 @@ RUN \
   imagemagick-heic \
   libgomp \
   libwebp \
-  git
+  'git>=2.52.1-r0'
 
 WORKDIR /usr/src/code
 
