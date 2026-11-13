@@ -165,6 +165,9 @@ RUN \
   strip --strip-unneeded /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/*.so
 
 FROM trusted-base AS final
+
+RUN apk upgrade --no-cache
+
 ARG PHP_API
 
 LABEL maintainer="team@appwrite.io"
