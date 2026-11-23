@@ -1,0 +1,18 @@
+schemaVersion: '2.0.0'
+
+# The utopia extension, built on PHP 8.4+ only (see Dockerfile).
+
+fileContentTests:
+  - name: 'utopia ini'
+    path: '/usr/local/etc/php/conf.d/utopia.ini'
+    expectedContents: ['extension=utopia.so']
+
+commandTests:
+  - name: 'utopia extension loaded'
+    command: "php"
+    args: ["-m"]
+    expectedOutput: [".*utopia.*"]
+  - name: 'utopia extension provides auth password hashes'
+    command: "php"
+    args: ["-r", "echo class_exists('Utopia\\Auth\\Hashes\\Argon2') ? 'argon2 ok' : 'argon2 missing';"]
+    expectedOutput: ["argon2 ok"]

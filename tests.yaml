@@ -32,9 +32,6 @@ fileExistenceTests:
   - name: 'Check mongodb ini'
     path: /usr/local/etc/php/conf.d/mongodb.ini
     shouldExist: true
-  - name: 'Check utopia ini'
-    path: /usr/local/etc/php/conf.d/utopia.ini
-    shouldExist: true
 
 fileContentTests:
   - name: 'swoole ini'
@@ -67,9 +64,6 @@ fileContentTests:
   - name: 'mongodb ini'
     path: '/usr/local/etc/php/conf.d/mongodb.ini'
     expectedContents: ['extension=mongodb.so']
-  - name: 'utopia ini'
-    path: '/usr/local/etc/php/conf.d/utopia.ini'
-    expectedContents: ['extension=utopia.so']
   
 commandTests:
   - name: 'Imagemagick command'
@@ -95,8 +89,3 @@ commandTests:
       - ".*lz4.*"
       - ".*snappy.*"
       - ".*mongodb.*"
-      - ".*utopia.*"
-  - name: 'utopia extension provides auth password hashes'
-    command: "php"
-    args: ["-r", "echo class_exists('Utopia\\Auth\\Hashes\\Argon2') ? 'argon2 ok' : 'argon2 missing';"]
-    expectedOutput: ["argon2 ok"]

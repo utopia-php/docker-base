@@ -167,18 +167,23 @@ RUN \
 
 # The utopia extension: Utopia libraries implemented in Rust (auth's password hashes,
 # validators, image, ...), built from appwrite/appwrite's crates at a pinned commit.
-# rustup reads the toolchain from the checkout's rust-toolchain.toml.
+# rustup reads the toolchain from the checkout's rust-toolchain.toml. It needs PHP 8.4+,
+# so an empty PHP_UTOPIA_VERSION (PHP 8.3) builds nothing and the image goes without it.
 FROM compile AS utopia
-RUN apk add --no-cache rustup clang-dev libheif-dev libwebp-dev && \
-  rustup-init -y --profile minimal --default-toolchain none
-RUN git init appwrite && cd appwrite && \
-  git remote add origin https://github.com/appwrite/appwrite.git && \
-  git sparse-checkout set --no-cone /Cargo.toml /Cargo.lock /rust-toolchain.toml /rustfmt.toml /.cargo /crates && \
-  git fetch --depth 1 origin $PHP_UTOPIA_VERSION && git checkout -q FETCH_HEAD && \
-  . "$HOME/.cargo/env" && \
-  cargo build --release --locked -p utopia-extension && \
-  strip --strip-unneeded target/release/libutopia.so && \
-  cp target/release/libutopia.so /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/utopia.so
+RUN mkdir -p /utopia/extensions /utopia/conf.d && \
+  if [ -n "$PHP_UTOPIA_VERSION" ]; then \
+    apk add --no-cache rustup clang-dev libheif-dev libwebp-dev && \
+    rustup-init -y --profile minimal --default-toolchain none && \
+    . "$HOME/.cargo/env" && \
+    git init appwrite && cd appwrite && \
+    git remote add origin https://github.com/appwrite/appwrite.git && \
+    git sparse-checkout set --no-cone /Cargo.toml /Cargo.lock /rust-toolchain.toml /rustfmt.toml /.cargo /crates && \
+    git fetch --depth 1 origin "$PHP_UTOPIA_VERSION" && git checkout -q FETCH_HEAD && \
+    cargo build --release --locked -p utopia-extension && \
+    strip --strip-unneeded target/release/libutopia.so && \
+    cp target/release/libutopia.so /utopia/extensions/utopia.so && \
+    echo extension=utopia.so > /utopia/conf.d/utopia.ini; \
+  fi
 
 FROM trusted-base AS final
 
@@ -222,7 +227,7 @@ COPY --from=lz4 /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/lz4.so
 COPY --from=snappy /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/snappy.so /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/
 COPY --from=xdebug /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/xdebug.so /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/
 COPY --from=mongodb /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/mongodb.so /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/
-COPY --from=utopia /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/utopia.so /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/
+COPY --from=utopia /utopia/extensions/ /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/
 
 RUN echo extension=swoole.so >> /usr/local/etc/php/conf.d/swoole.ini
 RUN echo extension=redis.so >> /usr/local/etc/php/conf.d/redis.ini
@@ -234,7 +239,7 @@ RUN echo extension=brotli.so >> /usr/local/etc/php/conf.d/brotli.ini
 RUN echo extension=lz4.so >> /usr/local/etc/php/conf.d/lz4.ini
 RUN echo extension=snappy.so >> /usr/local/etc/php/conf.d/snappy.ini
 RUN echo extension=mongodb.so >> /usr/local/etc/php/conf.d/mongodb.ini
-RUN echo extension=utopia.so >> /usr/local/etc/php/conf.d/utopia.ini
+COPY --from=utopia /utopia/conf.d/ /usr/local/etc/php/conf.d/
 
 EXPOSE 80
 
