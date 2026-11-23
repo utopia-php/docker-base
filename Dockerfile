@@ -25,6 +25,7 @@ ARG PHP_SNAPPY_VERSION
 ARG PHP_LZ4_VERSION
 ARG PHP_XDEBUG_VERSION
 ARG PHP_MONGO_VERSION
+ARG PHP_UTOPIA_VERSION
 
 RUN \
   apk add --no-cache --virtual .deps \
@@ -164,6 +165,21 @@ RUN \
   make && make install && \
   strip --strip-unneeded /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/*.so
 
+# The utopia extension: Utopia libraries implemented in Rust (auth's password hashes,
+# validators, image, ...), built from appwrite/appwrite's crates at a pinned commit.
+# rustup reads the toolchain from the checkout's rust-toolchain.toml.
+FROM compile AS utopia
+RUN apk add --no-cache rustup clang-dev libheif-dev libwebp-dev && \
+  rustup-init -y --profile minimal --default-toolchain none
+RUN git init appwrite && cd appwrite && \
+  git remote add origin https://github.com/appwrite/appwrite.git && \
+  git sparse-checkout set --no-cone /Cargo.toml /Cargo.lock /rust-toolchain.toml /rustfmt.toml /.cargo /crates && \
+  git fetch --depth 1 origin $PHP_UTOPIA_VERSION && git checkout -q FETCH_HEAD && \
+  . "$HOME/.cargo/env" && \
+  cargo build --release --locked -p utopia-extension && \
+  strip --strip-unneeded target/release/libutopia.so && \
+  cp target/release/libutopia.so /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/utopia.so
+
 FROM trusted-base AS final
 
 RUN apk upgrade --no-cache
@@ -206,6 +222,7 @@ COPY --from=lz4 /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/lz4.so
 COPY --from=snappy /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/snappy.so /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/
 COPY --from=xdebug /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/xdebug.so /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/
 COPY --from=mongodb /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/mongodb.so /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/
+COPY --from=utopia /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/utopia.so /usr/local/lib/php/extensions/no-debug-non-zts-${PHP_API}/
 
 RUN echo extension=swoole.so >> /usr/local/etc/php/conf.d/swoole.ini
 RUN echo extension=redis.so >> /usr/local/etc/php/conf.d/redis.ini
@@ -217,6 +234,7 @@ RUN echo extension=brotli.so >> /usr/local/etc/php/conf.d/brotli.ini
 RUN echo extension=lz4.so >> /usr/local/etc/php/conf.d/lz4.ini
 RUN echo extension=snappy.so >> /usr/local/etc/php/conf.d/snappy.ini
 RUN echo extension=mongodb.so >> /usr/local/etc/php/conf.d/mongodb.ini
+RUN echo extension=utopia.so >> /usr/local/etc/php/conf.d/utopia.ini
 
 EXPOSE 80
 
