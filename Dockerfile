@@ -178,7 +178,7 @@ RUN mkdir -p /utopia/extensions /utopia/conf.d && \
     git init appwrite && cd appwrite && \
     git remote add origin https://github.com/appwrite/appwrite.git && \
     git sparse-checkout set --no-cone /Cargo.toml /Cargo.lock /rust-toolchain.toml /rustfmt.toml /.cargo /crates && \
-    git fetch --depth 1 origin "$PHP_UTOPIA_VERSION" && git checkout -q FETCH_HEAD && \
+    git fetch --depth 1 --filter=blob:none origin "$PHP_UTOPIA_VERSION" && git checkout -q FETCH_HEAD && \
     cargo build --release --locked -p utopia-extension && \
     strip --strip-unneeded target/release/libutopia.so && \
     cp target/release/libutopia.so /utopia/extensions/utopia.so && \
