@@ -1,6 +1,6 @@
 schemaVersion: '2.0.0'
 
-# The utopia extension, built on PHP 8.4+ only (see Dockerfile).
+# The utopia extension, built on PHP 8.5 only (see Dockerfile).
 
 fileContentTests:
   - name: 'utopia ini'

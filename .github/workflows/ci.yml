@@ -97,7 +97,7 @@ jobs:
         run: container-structure-test test --image utopia-base-test --config tests.yaml
 
       - name: Run utopia extension structure tests
-        if: matrix.php-versions != '8.3'
+        if: matrix.php-versions == '8.5'
         run: container-structure-test test --image utopia-base-test --config tests-utopia.yaml
 
       - name: Check Swoole upload marker handling

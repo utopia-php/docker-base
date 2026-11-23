@@ -167,8 +167,8 @@ RUN \
 
 # The utopia extension: Utopia libraries implemented in Rust (auth's password hashes,
 # validators, image, ...), built from appwrite/appwrite's crates at a pinned commit.
-# rustup reads the toolchain from the checkout's rust-toolchain.toml. It needs PHP 8.4+,
-# so an empty PHP_UTOPIA_VERSION (PHP 8.3) builds nothing and the image goes without it.
+# rustup reads the toolchain from the checkout's rust-toolchain.toml. It uses PHP 8.5's
+# engine API, so an empty PHP_UTOPIA_VERSION (8.3, 8.4) builds nothing and the image goes without it.
 FROM compile AS utopia
 RUN mkdir -p /utopia/extensions /utopia/conf.d && \
   if [ -n "$PHP_UTOPIA_VERSION" ]; then \
