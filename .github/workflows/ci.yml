@@ -102,7 +102,7 @@ jobs:
   dive:
     name: Dive (${{ matrix.php-versions }})
     needs: build
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
@@ -153,7 +153,7 @@ jobs:
   trivy:
     name: Trivy (${{ matrix.php-versions }})
     needs: build
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
