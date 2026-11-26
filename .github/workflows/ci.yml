@@ -96,6 +96,10 @@ jobs:
       - name: Run container structure tests
         run: container-structure-test test --image utopia-base-test --config tests.yaml
 
+      - name: Run utopia extension structure tests
+        if: matrix.php-versions == '8.5'
+        run: container-structure-test test --image utopia-base-test --config tests-utopia.yaml
+
       - name: Check Swoole upload marker handling
         run: docker run --rm -v "$PWD/tests-swoole.php:/tests-swoole.php:ro" utopia-base-test php /tests-swoole.php
 

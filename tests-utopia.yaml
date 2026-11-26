@@ -1,0 +1,19 @@
+schemaVersion: '2.0.0'
+
+# The utopia extension, built on PHP 8.5 only (see Dockerfile).
+
+fileContentTests:
+  - name: 'utopia ini'
+    path: '/usr/local/etc/php/conf.d/utopia.ini'
+    expectedContents: ['extension=utopia.so']
+
+commandTests:
+  - name: 'utopia extension loaded'
+    command: "php"
+    args: ["-m"]
+    expectedOutput: [".*utopia.*"]
+  - name: 'utopia extension hashes and verifies passwords with Argon2'
+    command: "php"
+    # No `$` in the code: container-structure-test expands $NAME in args as environment variables.
+    args: ["-r", "define('HASH', (new Utopia\\Auth\\Hashes\\Argon2())->hash('pw')); echo str_starts_with(HASH, chr(36) . 'argon2') && (new Utopia\\Auth\\Hashes\\Argon2())->verify('pw', HASH) && !(new Utopia\\Auth\\Hashes\\Argon2())->verify('wrong', HASH) ? 'argon2 ok' : 'argon2 broken';"]
+    expectedOutput: ["argon2 ok"]

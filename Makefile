@@ -14,6 +14,7 @@ build:
 
 test: build
 	container-structure-test test --image $(IMAGE) --config tests.yaml
+	if [ "$(VERSION)" = "8.5" ]; then container-structure-test test --image $(IMAGE) --config tests-utopia.yaml; fi
 
 all:
 	@for v in $(VERSIONS); do $(MAKE) build VERSION=$$v || exit $$?; done
